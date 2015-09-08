@@ -444,7 +444,23 @@ namespace Neo.IronLua
 
 		private void UpdateTypeList()
 		{
-			IVsSimpleObjectList2 simpleList;
+		//	IVsObjectList2 _list;
+		//	ErrorHandler.ThrowOnFailure(libraryScope.GetList2((uint)_LIB_LISTTYPE.LLT_CLASSES, (uint)_LIB_FLAGS.LF_GLOBAL,
+		//		new[]
+		//			{
+		//				new VSOBSEARCHCRITERIA2()
+		//				{
+		//					eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
+		//					szName = String.Empty
+		//				}
+		//			}, null, out _list));
+		//	IVsCoTaskMemFreeMyStrings t = _list as IVsCoTaskMemFreeMyStrings;
+		//	string s;
+		//	_list.GetText(0, VSTREETEXTOPTIONS.TTO_DEFAULT, out s);
+		//	Debug.Print(s);
+
+
+			IVsSimpleObjectList2 simpleList;// = _list as IVsSimpleObjectList2;
 			ErrorHandler.ThrowOnFailure(library.GetList2((uint)_LIB_LISTTYPE.LLT_CLASSES, (uint)_LIB_FLAGS.LF_GLOBAL,
 				new[]
 					{

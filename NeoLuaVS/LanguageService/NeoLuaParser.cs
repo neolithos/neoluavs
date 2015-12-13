@@ -5,7 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.TextManager.Interop;
-using Neo.IronLua;
+
+// todo: named arguments
 
 namespace Neo.IronLua
 {
@@ -106,9 +107,9 @@ namespace Neo.IronLua
 		public void AddToken(Token token)
 		{
 			// Append the item to the list
-			NeoLuaToken t = new NeoLuaToken(this, lastToken, token);
+			var t = new NeoLuaToken(this, lastToken, token);
 			if (firstToken == null)
-				firstToken = t;
+				SetFirstToken(t);
 			if (lastToken != null)
 				lastToken.Next = t;
 			SetLastToken(t);
@@ -150,6 +151,14 @@ namespace Neo.IronLua
 			if (parent != null)
 				parent.SetLastScope(scope);
 		} // proc SetLastScope
+
+		private void SetFirstToken(NeoLuaToken t)
+		{
+			if (firstToken == null)
+				firstToken = t;
+			if (parent != null)
+				parent.SetFirstToken(t);
+		} // proc SetLastToken
 
 		private void SetLastToken(NeoLuaToken t)
 		{
@@ -701,18 +710,31 @@ namespace Neo.IronLua
 			if (!FetchTokenEat(scope, LuaToken.BracketOpen, code))
 				return false;
 
-			// Es handelt sich um ein Delegate
-			if (code.Current.Typ == LuaToken.BracketClose)
+			// exprArgumentList := '(' [ exprArg { , exprArg } ] ')'
+			while (code.Current.Typ != LuaToken.BracketClose)
 			{
-				EatToken(scope, code);
-				return true;
+				if (code.LookAhead.Typ == LuaToken.Assign) // named argument
+				{
+					if (!FetchTokenEat(scope, LuaToken.Identifier, code))
+						return false;
+
+					EatToken(scope, code);
+				}
+
+				// parse the expression
+				if (!ParseExpression(scope, code))
+					return ParseError(scope, code, "Expression expected.");
+
+				// optinal comma
+				if (code.Current.Typ != LuaToken.BracketClose)
+				{
+					if (!FetchTokenEat(scope, LuaToken.Comma, code))
+						return false;
+				}
 			}
-			else
-			{
-				if (!ParseExpressionList(scope, code))
-					return false;
-				return FetchTokenEat(scope, LuaToken.BracketClose, code);
-			}
+
+			EatToken(scope, code);
+			return true;
 		} // func ParseArgumentList
 
 		#endregion

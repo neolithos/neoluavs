@@ -11,13 +11,16 @@ using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 
+// todo: spaces on the end?
+
 namespace Neo.IronLua
 {
 	///////////////////////////////////////////////////////////////////////////////
 	/// <summary></summary>
 	public class NeoLuaSource : Source
 	{
-		private bool lIsChunkDirty = true;
+		private int dirtyTime = Environment.TickCount;
+		private bool isChunkDirty = true;
 
 		private NeoLuaChunk currentChunk = null;
 		private NeoLuaAuthoringScope authoringScope;
@@ -62,11 +65,11 @@ namespace Neo.IronLua
 
 		public NeoLuaChunk ParseChunk(string sText)
 		{
-			if (lIsChunkDirty)
+			if (isChunkDirty)
 			{
 				using (LuaLexer l = new LuaLexer(GetFilePath(), new StringReader(sText ?? GetText())))
 					currentChunk = NeoLuaChunk.Parse(l);
-				lIsChunkDirty = false;
+				isChunkDirty = false;
 			}
 			return currentChunk;
 		} // func ParseChunk
@@ -75,17 +78,17 @@ namespace Neo.IronLua
 
 		#region -- OnCommand --------------------------------------------------------------
 
-		private bool IsValidSpaceIndent(string sLineData, int iOfs, out int iSpaces)
+		private bool IsValidSpaceIndent(string lineData, int offset, out int spaces)
 		{
-			int iIndentSize = LanguageService.Preferences.IndentSize;
-			iSpaces = 0;
-			while (iOfs >= 0 && sLineData[iOfs] == ' ' && iIndentSize >= 0)
+			var indentSize = LanguageService.Preferences.IndentSize;
+			spaces = 0;
+			while (offset >= 0 && lineData[offset] == ' ' && indentSize >= 0)
 			{
-				iSpaces++;
-				iOfs--;
-				iIndentSize--;
+				spaces++;
+				offset--;
+				indentSize--;
 			}
-			return iSpaces > 0;
+			return spaces > 0;
 		} // func IsValidSpaceIndent
 
 		private int DeindentLine(int iLine, int iColumn, int iWordLength)
@@ -277,7 +280,7 @@ namespace Neo.IronLua
 			{
 				TypeListItem item = new TypeListItem(list, dwIndex, sName);
 				int iPos = items.BinarySearch(item);
-				if(iPos < 0)
+				if (iPos < 0)
 					items.Insert(~iPos, item);
 				else
 					item = items[iPos];
@@ -316,7 +319,7 @@ namespace Neo.IronLua
 
 			private string GetName()
 			{
-				if (dwIndex == NamespaceIndex )
+				if (dwIndex == NamespaceIndex)
 					return sName;
 				else
 				{
@@ -444,20 +447,20 @@ namespace Neo.IronLua
 
 		private void UpdateTypeList()
 		{
-		//	IVsObjectList2 _list;
-		//	ErrorHandler.ThrowOnFailure(libraryScope.GetList2((uint)_LIB_LISTTYPE.LLT_CLASSES, (uint)_LIB_FLAGS.LF_GLOBAL,
-		//		new[]
-		//			{
-		//				new VSOBSEARCHCRITERIA2()
-		//				{
-		//					eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
-		//					szName = String.Empty
-		//				}
-		//			}, null, out _list));
-		//	IVsCoTaskMemFreeMyStrings t = _list as IVsCoTaskMemFreeMyStrings;
-		//	string s;
-		//	_list.GetText(0, VSTREETEXTOPTIONS.TTO_DEFAULT, out s);
-		//	Debug.Print(s);
+			//	IVsObjectList2 _list;
+			//	ErrorHandler.ThrowOnFailure(libraryScope.GetList2((uint)_LIB_LISTTYPE.LLT_CLASSES, (uint)_LIB_FLAGS.LF_GLOBAL,
+			//		new[]
+			//			{
+			//				new VSOBSEARCHCRITERIA2()
+			//				{
+			//					eSrchType = VSOBSEARCHTYPE.SO_ENTIREWORD,
+			//					szName = String.Empty
+			//				}
+			//			}, null, out _list));
+			//	IVsCoTaskMemFreeMyStrings t = _list as IVsCoTaskMemFreeMyStrings;
+			//	string s;
+			//	_list.GetText(0, VSTREETEXTOPTIONS.TTO_DEFAULT, out s);
+			//	Debug.Print(s);
 
 
 			IVsSimpleObjectList2 simpleList;// = _list as IVsSimpleObjectList2;
@@ -554,7 +557,7 @@ namespace Neo.IronLua
 			//			szName = sStarts
 			//		}
 			//	}, out simpleList));
-			
+
 			//string sTmp;
 			//simpleList.GetTextWithOwnership(0, VSTREETEXTOPTIONS.TTO_BASETEXT, out sTmp);
 			//Debug.Print(sTmp);
@@ -581,13 +584,24 @@ namespace Neo.IronLua
 			//Marshal.QueryInterface(Marshal.GetIUnknownForObject(listC), ref riid, out p);
 
 			//simpleList = listC as IVsSimpleObjectList2;
-			
+
 			//simp
 
 			//return new ObjectListDeclarations(simpleList);
 		} // func FidDeclarations
 
 		#endregion
+
+		public override void OnIdle(bool periodic)
+		{
+			if (this.IsDirty)
+			{
+				var delay = unchecked(Environment.TickCount - dirtyTime);
+				if (delay > this.LanguageService.Preferences.CodeSenseDelay && !this.LanguageService.IsParsing)
+					BeginParse();
+			}
+			base.OnIdle(periodic);
+		} // proc OnIdle
 
 		public override bool IsDirty
 		{
@@ -598,14 +612,17 @@ namespace Neo.IronLua
 			set
 			{
 				if (value)
-					lIsChunkDirty = true;
+				{
+					dirtyTime = Environment.TickCount;
+					isChunkDirty = true;
+				}
 				base.IsDirty = value;
 			}
 		} // prop IsDirty
 
-		public bool IsChunkDirty { get { return lIsChunkDirty; } }
-		public NeoLuaChunk ParseInfo { get { return currentChunk; } }
-		public NeoLuaAuthoringScope AuthoringScope { get { return authoringScope; } }
+		public bool IsChunkDirty => isChunkDirty;
+		public NeoLuaChunk ParseInfo => currentChunk;
+		public NeoLuaAuthoringScope AuthoringScope => authoringScope;
 	} // class NeoLuaSource
 }
  

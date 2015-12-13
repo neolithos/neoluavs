@@ -8,33 +8,40 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudioTools;
+using Neo.IronLua.Debugger;
+using Neo.IronLua.Debugger.Remote;
 
 namespace Neo.IronLua
 {
 	[
-	PackageRegistration(UseManagedResourcesOnly = true),
-	InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400),
+		PackageRegistration(UseManagedResourcesOnly = true),
+		InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400),
 
-	ProvideService(typeof(NeoLuaLanguageService), ServiceName = "NeoLua Language Service"),
-	ProvideLanguageService(typeof(NeoLuaLanguageService), "NeoLua", 200,
-		ShowSmartIndent = true,
-		EnableLineNumbers = true,
-		RequestStockColors = false,
+		ProvideService(typeof(NeoLuaLanguageService), ServiceName = "NeoLua Language Service"),
+		ProvideLanguageService(typeof(NeoLuaLanguageService), "NeoLua", 200,
+			ShowSmartIndent = true,
+			EnableLineNumbers = true,
+			RequestStockColors = false,
 
-		CodeSense = true,
-		CodeSenseDelay = 1000,
+			CodeSense = true,
+			CodeSenseDelay = 1000,
 
-		AutoOutlining = true,
-		EnableCommenting = true,
+			AutoOutlining = true,
+			EnableCommenting = true,
 
-		MatchBraces = true,
-		MatchBracesAtCaret = true,
-		ShowMatchingBrace = true
-	),
-	ProvideLanguageExtension(typeof(NeoLuaLanguageService), ".lua"),
-	ProvideLanguageExtension(typeof(NeoLuaLanguageService), ".nlua"),
+			MatchBraces = true,
+			MatchBracesAtCaret = true,
+			ShowMatchingBrace = true
+		),
+		ProvideLanguageExtension(typeof(NeoLuaLanguageService), ".lua"),
+		ProvideLanguageExtension(typeof(NeoLuaLanguageService), ".nlua"),
+	
+		//ProvideDebugEngine("NeoLua Debugging", typeof(AD7ProgramProvider), typeof(AD7Engine), AD7Engine.DebugEngineId),
+    //ProvideDebugPortSupplier("NeoLua Remote (des)", typeof(RemoteDebugPortSupplier), RemoteDebugPortSupplier.PortSupplierId), // , typeof(RemoteDebugPortPicker)
+																																																															//ProvideDebugPortPicker(typeof(RemoteDebugPortPicker)),
 
-	Guid(GuidList.guidNeoLuaVSPkgString)
+		Guid(GuidList.guidNeoLuaVSPkgString)
 	]
 	public sealed class NeoLuaVSPackage : Package, IOleComponent
 	{

@@ -117,12 +117,12 @@ namespace Neo.IronLua
 						c = s.ParseChunk(req.Text);
 
 						// Add errors, Regions
-						NeoLuaToken currentToken = c.FirstToken;
-						string sFileName = s.GetFilePath();
+						var currentToken = c.FirstToken;
+						var fileName = s.GetFilePath();
 						while (currentToken != null)
 						{
 							if (!String.IsNullOrEmpty(currentToken.Error))
-								req.Sink.AddError(sFileName, currentToken.Error, currentToken.Span, currentToken.ErrorSeverity);
+								req.Sink.AddError(fileName, currentToken.Error, currentToken.Span, currentToken.ErrorSeverity);
 							if (currentToken.Token == LuaToken.Comment && currentToken.EndLine - currentToken.StartLine >= 2)
 							{
 								req.Sink.ProcessHiddenRegions = true;
@@ -134,7 +134,7 @@ namespace Neo.IronLua
 						}
 
 						// Add hidden regions
-						NeoLuaScope currentScope = c.FirstScope;
+						var currentScope = c.FirstScope;
 						while (currentScope != null)
 						{
 							if (currentScope.CanHiddenRegion)
@@ -198,8 +198,8 @@ namespace Neo.IronLua
 				case ParseReason.CompleteWord:
 					{
 						c = s.ParseChunk(req.Text);
-						NeoLuaToken t = c.FindToken(req.Line, req.Col);
-						NeoLuaTypeScope typeScope = t.Parent as NeoLuaTypeScope ?? (t.Next != null ? t.Next.Parent as NeoLuaTypeScope : null);
+						var t = c.FindToken(req.Line, req.Col);
+						var typeScope = t?.Parent as NeoLuaTypeScope ?? (t.Next != null ? t.Next.Parent as NeoLuaTypeScope : null);
 						if (typeScope != null)
 						{
 							scope.CurrentToken = t;
@@ -330,11 +330,12 @@ namespace Neo.IronLua
 		{
 			// from IronPythonLanguage sample
 			// this appears to be necessary to get a parse request with ParseReason = Check?
-			Source src = (Source)GetSource(this.LastActiveTextView);
+			var src = (Source)GetSource(this.LastActiveTextView);
 			if (src != null && src.LastParseTime >= Int32.MaxValue >> 12)
 			{
 				src.LastParseTime = 0;
 			}
+			//Debug.Print("Document check: isDirty={0}, {1}ms old, isParsing={2} ", src.IsDirty, Environment.TickCount - src.LastParseTime, IsParsing);
 			base.OnIdle(periodic);
 		} // proc OnIdle
 

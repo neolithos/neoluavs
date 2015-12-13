@@ -55,16 +55,16 @@ namespace Neo.IronLua
 		private const int TypeFlag = 0xC0;
 
 
-		private int iOffset;			// current offset within the line
-		private string sLine;			// current line
+		private int offset;      // current offset within the line
+		private string line;     // current line
 
 		/// <summary>Sets the current line</summary>
 		/// <param name="source"></param>
 		/// <param name="offset"></param>
 		public void SetSource(string source, int offset)
 		{
-			this.iOffset = offset;
-			this.sLine = source;
+			this.offset = offset;
+			this.line = source;
 		} // proc SetSource
 
 		#region -- Simple Lexer -----------------------------------------------------------
@@ -74,19 +74,19 @@ namespace Neo.IronLua
 		private void CollectString(char cStringEnd)
 		{
 			bool lSkipNext = false;
-			iOffset++;
-			while (iOffset < sLine.Length)
+			offset++;
+			while (offset < line.Length)
 			{
 				if (lSkipNext)
 					lSkipNext = true;
-				else if (sLine[iOffset] == '\\')
+				else if (line[offset] == '\\')
 					lSkipNext = true;
-				else if (sLine[iOffset] == cStringEnd)
+				else if (line[offset] == cStringEnd)
 				{
-					iOffset++;
+					offset++;
 					break;
 				}
-				iOffset++;
+				offset++;
 			}
 		} // proc CollectString
 
@@ -97,9 +97,9 @@ namespace Neo.IronLua
 			char cE = 'E';
 			char ce = 'e';
 
-			while (iOffset <= sLine.Length)
+			while (offset <= line.Length)
 			{
-				char c = iOffset < sLine.Length ? sLine[iOffset] : '\0';
+				char c = offset < line.Length ? line[offset] : '\0';
 
 				switch (iState)
 				{
@@ -111,7 +111,7 @@ namespace Neo.IronLua
 							iState = 20;
 						else if (c == ':')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.Colon;
 						}
 						else if (c == '0')
@@ -125,29 +125,29 @@ namespace Neo.IronLua
 						}
 						else if (c == '(')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.BraceOpen;
 						}
 						else if (c == '[')
 							iState = 12;
 						else if (c == ')')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.BraceClose;
 						}
 						else if (c == ']')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.BraceSquareClose;
 						}
 						else if (c == '{' || c == '}')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.Braces;
 						}
 						else if (c == ',')
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.Comma;
 						}
 						else if (c == '-')
@@ -160,7 +160,7 @@ namespace Neo.IronLua
 							iState = 11;
 						else
 						{
-							iOffset++;
+							offset++;
 							return SimpleToken.Unknown; // leave the area as default
 						}
 						break;
@@ -202,7 +202,7 @@ namespace Neo.IronLua
 							iState = 16;
 						else
 						{
-							iOffset = sLine.Length;
+							offset = line.Length;
 							return SimpleToken.LineComment;
 						}
 						break;
@@ -264,7 +264,7 @@ namespace Neo.IronLua
 						throw new InvalidOperationException();
 				}
 
-				iOffset++;
+				offset++;
 			}
 
 			return SimpleToken.Eof;
@@ -272,45 +272,43 @@ namespace Neo.IronLua
 
 		#endregion
 
-		private string GetValue(int iStart, int iOffset)
-		{
-			return sLine.Substring(iStart, iOffset - iStart);
-		} // func GetValue
+		private string GetValue(int startAt, int offset)
+			=> line.Substring(startAt, offset - startAt);
 
 		private int ScanLevel()
 		{
-			int iLevel = 0;
-			while (iOffset < sLine.Length)
+			var level = 0;
+			while (offset < line.Length)
 			{
-				if (sLine[iOffset] == '=')
-					iLevel++;
+				if (line[offset] == '=')
+					level++;
 				else
 					break;
-				iOffset++;
+				offset++;
 			}
-			if (iLevel > 0x7FFFFF)
+			if (level > 0x7FFFFF)
 				throw new OverflowException();
-			iOffset++; // Jum over [
-			return iLevel;
+			offset++; // Jum over [
+			return level;
 		} // func ScanLevel
 
-		private SimpleToken ScanSimpleTokenNonWhiteSpace(ref int iStart)
+		private SimpleToken ScanSimpleTokenNonWhiteSpace(ref int startAt)
 		{
-			iStart=iOffset;
-			SimpleToken t = ScanSimpleToken();
-			return t == SimpleToken.WhiteSpace ? ScanSimpleTokenNonWhiteSpace(ref iStart) : t;
+			startAt = offset;
+			var t = ScanSimpleToken();
+			return t == SimpleToken.WhiteSpace ? ScanSimpleTokenNonWhiteSpace(ref startAt) : t;
 		} // func ScanSimpleTokenNonWhiteSpace
 
-		private static void SetLineStateExtented(ref int lineState, int iNewState)
+		private static void SetLineStateExtented(ref int lineState, int newState)
 		{
-			lineState = (lineState & ~ParserFlag) | (iNewState << 2);
+			lineState = (lineState & ~ParserFlag) | (newState << 2);
 		} // proc SetLineStateExtented
 
-		private static void SetLineStateType(ref int lineState, int iNewState)
+		private static void SetLineStateType(ref int lineState, int newState)
 		{
-			if (iNewState == 0)
+			if (newState == 0)
 				SetLineStateData(ref lineState, 0);
-			lineState = (lineState & ~TypeFlag) | (iNewState << 6);
+			lineState = (lineState & ~TypeFlag) | (newState << 6);
 		} // proc SetLineStateType
 
 		private static void SetLineStateData(ref int lineState, int iData)
@@ -319,21 +317,19 @@ namespace Neo.IronLua
 		} // func SetLineStateData
 
 		private static int GetLineStateData(int lineState)
-		{
-			return lineState >> DataShift;
-		} // func GetLineStateData
-
+			=> lineState >> DataShift;
+	
 		public bool ScanTokenAndProvideInfoAboutIt(TokenInfo tokenInfo, ref int lineState)
 		{
-		RedoScan:
-			SimpleToken token = SimpleToken.Unknown;
-			int iStart = iOffset;
+			RedoScan:
+			var token = SimpleToken.Unknown;
+			var startAt = offset;
 
-		RedoLineState:
+			RedoLineState:
 			if ((lineState & StateFlag) == 0)
 			{
 				if (token == SimpleToken.Unknown)
-					token = ScanSimpleTokenNonWhiteSpace(ref iStart);
+					token = ScanSimpleTokenNonWhiteSpace(ref startAt);
 
 				if (token == SimpleToken.Identifier)
 				{
@@ -344,16 +340,16 @@ namespace Neo.IronLua
 					// do (a : typedef,
 					// for a : typedef,
 					// foreach a : typedef
-					string sValue = GetValue(iStart, iOffset);
-					if (sValue == "local" || sValue == "foreach" || sValue == "for")
+					var value = GetValue(startAt, offset);
+					if (value == "local" || value == "foreach" || value == "for")
 						SetLineStateExtented(ref lineState, 1);
-					else if (sValue == "const")
+					else if (value == "const")
 						SetLineStateExtented(ref lineState, 3);
-					else if (sValue == "function")
+					else if (value == "function")
 						SetLineStateExtented(ref lineState, 5);
-					else if (sValue == "do")
+					else if (value == "do")
 						SetLineStateExtented(ref lineState, 8);
-					else if (sValue == "cast")
+					else if (value == "cast")
 						SetLineStateExtented(ref lineState, 13);
 				}
 				goto EmitToken;
@@ -361,36 +357,39 @@ namespace Neo.IronLua
 			else if ((lineState & (StringFlag | CommentFlag)) != 0) // Block (String, Comment)
 			{
 				#region -- block --
-				if (iOffset >= sLine.Length)
+				if (offset >= line.Length)
 				{
-					token = SimpleToken.Eof;
+					if (startAt >= offset)
+						token = SimpleToken.Eof;
+					else
+						token = (lineState & StringFlag) == StringFlag ? SimpleToken.String : SimpleToken.LineComment; // Emit part
 				}
 				else
 				{
-					int iLevel = GetLineStateData(lineState);
+					var level = GetLineStateData(lineState);
 					token = (lineState & StringFlag) == StringFlag ? SimpleToken.String : SimpleToken.LineComment; // Emit part
-					while (iOffset < sLine.Length)
+					while (offset < line.Length)
 					{
-						if (sLine[iOffset] == ']' && iOffset + iLevel + 1 < sLine.Length && sLine[iOffset + iLevel + 1] == ']')
+						if (line[offset] == ']' && offset + level + 1 < line.Length && line[offset + level + 1] == ']')
 						{
 							// check for equals
-							bool lValid = true;
-							for (int i = iOffset + 1; i <= iOffset + iLevel; i++)
+							var isValid = true;
+							for (int i = offset + 1; i <= offset + level; i++)
 							{
-								if (sLine[i] != '=')
+								if (line[i] != '=')
 								{
-									lValid = false;
+									isValid = false;
 									break;
 								}
 							}
-							if (lValid)
+							if (isValid)
 							{
-								iOffset += iLevel + 2;
+								offset += level + 2;
 								lineState = lineState & (ParserFlag | TypeFlag);
 								break;
 							}
 						}
-						iOffset++;
+						offset++;
 					}
 				}
 				goto EmitToken;
@@ -399,9 +398,9 @@ namespace Neo.IronLua
 			else if ((lineState & TypeFlag) != 0) // typedef parser idenfifier.idenfier[identifier,identifier]
 			{
 				#region -- typedef --
-				int iLevel = GetLineStateData(lineState);
+				var level = GetLineStateData(lineState);
 				if (token == SimpleToken.Unknown)
-					token = ScanSimpleTokenNonWhiteSpace(ref iStart);
+					token = ScanSimpleTokenNonWhiteSpace(ref startAt);
 				if (token != SimpleToken.Eof)
 				{
 					switch ((lineState & TypeFlag) >> 6)
@@ -423,7 +422,7 @@ namespace Neo.IronLua
 								SetLineStateType(ref lineState, 1);
 							else if (token == SimpleToken.Comma)
 							{
-								if (iLevel == 0)
+								if (level == 0)
 								{
 									SetLineStateType(ref lineState, 0);
 									goto RedoLineState;
@@ -433,23 +432,23 @@ namespace Neo.IronLua
 							}
 							else if (token == SimpleToken.BraceSquareOpen)
 							{
-								iLevel++;
-								if (iLevel > 0x7FFFFF)
+								level++;
+								if (level > 0x7FFFFF)
 									throw new OverflowException();
 
-								SetLineStateData(ref lineState, iLevel);
+								SetLineStateData(ref lineState, level);
 								SetLineStateType(ref lineState, 1);
 							}
 							else if (token == SimpleToken.BraceSquareClose)
 							{
-								iLevel--;
-								if (iLevel < 0)
+								level--;
+								if (level < 0)
 								{
 									SetLineStateType(ref lineState, 0);
 									goto RedoLineState;
 								}
 								else
-									SetLineStateData(ref lineState, iLevel);
+									SetLineStateData(ref lineState, level);
 							}
 							else
 							{
@@ -465,7 +464,7 @@ namespace Neo.IronLua
 			else if ((lineState & ParserFlag) != 0) // extented Parser
 			{
 				if (token == SimpleToken.Unknown)
-					token = ScanSimpleTokenNonWhiteSpace(ref iStart);
+					token = ScanSimpleTokenNonWhiteSpace(ref startAt);
 				if (token != SimpleToken.Eof)
 				{
 					switch ((lineState & ParserFlag) >> 2)
@@ -503,7 +502,7 @@ namespace Neo.IronLua
 								SetLineStateExtented(ref lineState, 0);
 							break;
 						case 4:
-							if ((token == SimpleToken.Identifier && GetValue(iStart, iOffset) == "typeof") ||
+							if ((token == SimpleToken.Identifier && GetValue(startAt, offset) == "typeof") ||
 									 token == SimpleToken.Colon)
 								SetLineStateType(ref lineState, 1);
 							SetLineStateExtented(ref lineState, 0);
@@ -592,7 +591,7 @@ namespace Neo.IronLua
 								SetLineStateExtented(ref lineState, 0);
 							}
 							break;
-						#endregion
+							#endregion
 					}
 				}
 				goto EmitToken;
@@ -600,7 +599,7 @@ namespace Neo.IronLua
 
 			throw new InvalidOperationException();
 
-		EmitToken:
+			EmitToken:
 			switch (token)
 			{
 				case SimpleToken.Unknown:
@@ -674,7 +673,7 @@ namespace Neo.IronLua
 					break;
 
 				case SimpleToken.Identifier:
-					if (IsKeyword(sLine, iStart, iOffset))
+					if (IsKeyword(line, startAt, offset))
 					{
 						tokenInfo.Color = TokenColor.Keyword;
 						tokenInfo.Type = TokenType.Keyword;
@@ -702,9 +701,9 @@ namespace Neo.IronLua
 					goto RedoLineState;
 			}
 
-			tokenInfo.StartIndex = iStart;
+			tokenInfo.StartIndex = startAt;
 			tokenInfo.Color = tokenInfo.Color;
-			tokenInfo.EndIndex = iOffset - 1;
+			tokenInfo.EndIndex = offset - 1;
 			return true;
 		} // func ScanTokenAndProvideInfoAboutIt
 

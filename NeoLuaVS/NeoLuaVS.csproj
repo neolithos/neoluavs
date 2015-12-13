@@ -60,6 +60,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualStudio.Debugger.Interop.14.0, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Debugger.InteropA, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.OLE.Interop" />
     <Reference Include="Microsoft.VisualStudio.Package.LanguageService.12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop" />
@@ -146,6 +150,18 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Common\SharedProject\ProvideDebugEngineAttribute.cs">
+      <Link>Common\SharedProject\ProvideDebugEngineAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Common\SharedProject\ProvideDebugPortPickerAttribute.cs">
+      <Link>Common\SharedProject\ProvideDebugPortPickerAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Common\SharedProject\ProvideDebugPortSupplierAttribute.cs">
+      <Link>Common\SharedProject\ProvideDebugPortSupplierAttribute.cs</Link>
+    </Compile>
+    <Compile Include="Debugger\AD7Engine.cs" />
+    <Compile Include="Debugger\AD7ProgramProvider.cs" />
+    <Compile Include="Debugger\Remote\RemoteDebugPortSupplier.cs" />
     <Compile Include="Guids.cs" />
     <Compile Include="LanguageService\NeoLuaAuthoringScopes.cs" />
     <Compile Include="LanguageService\NeoLuaLanguageService.cs" />

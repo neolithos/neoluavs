@@ -521,40 +521,39 @@ namespace Neo.IronLua
 
 		private static bool ParseElseStatement(NeoLuaScope scope, LuaLexer code)
 		{
-			if (code.Current.Typ == LuaToken.KwElseif)
+			switch (code.Current.Typ)
 			{
-				EatToken(scope, code);
-				if (!ParseExpression(scope, code))
-					return false;
+				case LuaToken.KwElseif:
+					EatToken(scope, code);
+					if (!ParseExpression(scope, code))
+						return false;
 
-				if (!FetchTokenEat(scope, LuaToken.KwThen, code))
-					return false;
+					if (!FetchTokenEat(scope, LuaToken.KwThen, code))
+						return false;
 
-				if (!ParseIfElseBlock(scope, code))
-					return false;
+					if (!ParseIfElseBlock(scope, code))
+						return false;
 
-				return ParseElseStatement(scope, code);
+					return ParseElseStatement(scope, code);
+
+				case LuaToken.KwElse:
+
+					EatToken(scope, code);
+					if (!ParseIfElseBlock(scope, code))
+						return false;
+					return FetchTokenEat(scope, LuaToken.KwEnd, code);
+
+				case LuaToken.KwEnd:
+					EatToken(scope, code);
+					return true;
+
+				default:
+					return ParseError(scope, code, "else or end is missing.");
 			}
-			else if (code.Current.Typ == LuaToken.KwElse)
-			{
-				EatToken(scope, code);
-				if (!ParseIfElseBlock(scope, code))
-					return false;
-				return FetchTokenEat(scope, LuaToken.KwEnd, code);
-			}
-			else if (code.Current.Typ == LuaToken.KwEnd)
-			{
-				EatToken(scope, code);
-				return true;
-			}
-			else
-				return ParseError(scope, code, "else or end is missing.");
 		} // func ParseElseStatement
 
 		private static bool ParseIfElseBlock(NeoLuaScope parent, LuaLexer code)
-		{
-			return ParseBlock(parent, code);
-		} // func ParseIfElseBlock
+			=> ParseBlock(parent, code);
 
 		private static bool ParseConst(NeoLuaScope scope, LuaLexer code)
 		{
@@ -810,7 +809,7 @@ namespace Neo.IronLua
 		private static bool ParseExpressionUnary(NeoLuaScope scope, LuaLexer code)
 		{
 			// expUn ::= { 'not' | - | # | ~ } expPow
-			LuaToken typ = code.Current.Typ;
+			var typ = code.Current.Typ;
 			if (typ == LuaToken.KwNot ||
 					typ == LuaToken.Minus ||
 					typ == LuaToken.Dilde ||
@@ -952,7 +951,7 @@ namespace Neo.IronLua
 		{
 			// doloop ::= do '(' name { ',' name } = expr { ',' expr }  ')' block end
 
-			NeoLuaScope scope = parent.AddScope<NeoLuaBlockScope>();
+			var scope = parent.AddScope<NeoLuaBlockScope>();
 
 			// fetch do
 			if (!FetchTokenEat(scope, LuaToken.KwDo, code))
@@ -969,13 +968,49 @@ namespace Neo.IronLua
 			}
 
 			// parse the block
-			return ParseBlock(scope, code) &&
-				FetchTokenEat(scope, LuaToken.KwEnd, code);
+			if (!ParseBlock(scope, code))
+				return false;
+			if (!FetchTokenEat(scope, LuaToken.KwEnd, code))
+				return false;
+
+			if (FetchTokenOptional(scope, LuaToken.BracketOpen, code) == null)
+				return true;
+
+			while (FetchTokenOptional(scope, LuaToken.BracketClose, code) == null)
+			{
+				if (!FetchTokenEat(scope, LuaToken.KwFunction, code))
+					return false;
+
+				if (FetchTokenOptional(scope, LuaToken.BracketOpen, code) != null)
+				{
+					if (!FetchTokenEat(scope, LuaToken.Identifier, code))
+						return false;
+
+					if (FetchTokenOptional(scope, LuaToken.Colon, code) != null)
+					{
+						if (!ParseType(scope, code))
+							return false;
+					}
+
+					if (!FetchTokenEat(scope, LuaToken.BracketClose, code))
+						return false;
+				}
+
+				if (!ParseBlock(scope, code))
+					return false;
+
+				if (!FetchTokenEat(scope, LuaToken.KwEnd, code))
+					return false;
+
+				FetchTokenOptional(scope, LuaToken.Comma, code);
+			}
+
+			return true;
 		} // ParseDoLoop
 
 		private static bool ParseWhileLoop(NeoLuaScope parent, LuaLexer code)
 		{
-			NeoLuaScope scope = parent.AddScope<NeoLuaBlockScope>();
+			var scope = parent.AddScope<NeoLuaBlockScope>();
 			return
 				// get the expression
 				FetchTokenEat(scope, LuaToken.KwWhile, code) &&
@@ -989,7 +1024,7 @@ namespace Neo.IronLua
 
 		private static bool ParseRepeatLoop(NeoLuaScope parent, LuaLexer code)
 		{
-			NeoLuaScope scope = parent.AddScope<NeoLuaBlockScope>();
+			var scope = parent.AddScope<NeoLuaBlockScope>();
 			return
 				// loop content
 				FetchTokenEat(scope, LuaToken.KwRepeat, code) &&

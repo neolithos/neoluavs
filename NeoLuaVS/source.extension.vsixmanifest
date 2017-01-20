@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
 	<Metadata>
-		<Identity Id="ba4fdff8-63ba-45c3-bc2e-0bac596d855e" Version="1.1" Language="en-US" Publisher="TecWare GmbH" />
+		<Identity Id="ba4fdff8-63ba-45c3-bc2e-0bac596d855e" Version="1.1.2" Language="en-US" Publisher="TecWare GmbH" />
 		<DisplayName>NeoLuaVS</DisplayName>
 		<Description xml:space="preserve">Editor for the NeoLua language.</Description>
 	</Metadata>
